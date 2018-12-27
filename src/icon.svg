@@ -1,0 +1,6 @@
+<!-- Copyright 2018 _y_s -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+	<path d="M32,0h-20a12,12,0,0,0-12,12v24a12,12,0,0,0,12,12h24a12,12,0,0,0,12-12v-20z" fill="#f00" />
+	<path d="M32,0v12a4,4,0,0,0,4,4h12z" fill="#faa" />
+	<text x="4" y="36" fill="#fff" font-size="20">pdf</text>
+</svg>

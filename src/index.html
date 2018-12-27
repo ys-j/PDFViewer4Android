@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+	<meta charset=utf-8>
+	<title>PDF Viewer</title>
+	<meta name=viewport content="width=device-width, initial-scale=1">
+	<link rel=icon type=image/svg+xml href=icon.svg>
+	<link rel=stylesheet type=text/css media=screen href=screen.css>
+	<header>
+		<h1 id=filename></h1>
+		<div><input id=pageNumber type=number min=1 value=1> / <span id=pageLength>1</span></div>
+	</header>
+	<main id=container></main>
+	<footer>
+		<span>PDF Viewer for Android</span>
+		<small>This add-on includes <a href=https://mozilla.github.io/pdf.js/ target=_blank>PDF.js</a> licensed under the <a href=http://www.apache.org/licenses/LICENSE-2.0 target=_blank>Apache License, Version 2.0</a>.</small>
+	</footer>
+	<script src=pdf.js></script>
+	<script src=viewer.js></script>
+</html>
