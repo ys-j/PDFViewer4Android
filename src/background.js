@@ -26,20 +26,14 @@ browser.webRequest.onHeadersReceived.addListener(details => {
 	}
 }, { urls: ['*://*/*'], types: ['main_frame'] }, ['blocking', 'responseHeaders']);
 
-const creatingDownloadParams = new Promise(resolve => {
-	let isAndroid = true;
-	gettingPlatformInfo.then(info => {
-		isAndroid = info.os === 'android';
+let creatingDownloadParams = new Promise(() => {});
+browser.runtime.onMessage.addListener((message, sender) => {
+	const blob = new Blob([message.data], { type: mimePdf });
+	creatingDownloadParams = Promise.resolve({
+		url: URL.createObjectURL(blob),
+		filename: message.filename,
 	});
-	browser.runtime.onMessage.addListener((message, sender) => {
-		const blob = new Blob([message.data], { type: mimePdf });
-		resolve({
-			url: URL.createObjectURL(blob),
-			filename: message.filename,
-			saveAs: !isAndroid,
-		});
-		browser.pageAction.show(sender.tab.id);
-	});
+	browser.pageAction.show(sender.tab.id);
 });
 
 browser.pageAction.onClicked.addListener(async () => {
