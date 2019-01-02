@@ -13,35 +13,48 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-(async function () {
-	const searches = new URLSearchParams(location.search);
-	const url = searches.get('file');
+pdfjsLib.GlobalWorkerOptions.workerSrc = browser.runtime.getURL('pdf.worker.js');
 
-	const container = document.getElementById('container');
+(async function (url, container) {
+	// Page Action
+	window.addEventListener('unload', () => browser.pageAction.hide(tabId), { passive: true });
+	window.addEventListener('pageshow', () => browser.pageAction.show(tabId), { passive: true });
+
+	// Header Elements
+	const filename = document.getElementById('filename');
+	const status = document.getElementById('status');
+	const pageNumber = document.getElementById('pageNumber');
+	const pageLength = document.getElementById('pageLength');
+	const progress = document.getElementById('progress');
 	
+	async function* pageGenerator(renderer) {
+		let i = progress.value = 0;
+		const pdf = await renderer.loaded;
+		progress.max = pdf.numPages;
+		while (i < pdf.numPages) {
+			await promisePause;
+			yield pdf.getPage(++i);
+			pageNumber.max = pageLength.textContent = progress.value = i;
+		}
+	};
+
+	let promisePause = Promise.resolve();
+
 	class Renderer {
 		constructor(url) {
 			this.loaded = pdfjsLib.getDocument({
 				url: url,
 				cMapPacked: true,
-				cMapUrl: 'cmaps/',
+				cMapUrl: browser.runtime.getURL('cmaps/'),
+				withCredentials: true,
 			});
 			this.filename = pdfjsLib.getFilenameFromUrl(url);
-			if (this.filename) {
-				document.title = this.filename;
-			}
 		}
 		async render(scale = 1) {
-			const pdf = await this.loaded;
-			const generator = async function* () {
-				let i = 0;
-				while (i < pdf.numPages) {
-					yield pdf.getPage(++i);
-				}
-			};
-			for await (let page of generator()) {
+			for await (const page of pageGenerator(this)) {
 				const pageId = 'page' + page.pageNumber;
-				const viewport = page.getViewport(scale);
+				const viewport = page.getViewport(scale * 96 / 72);
+				const paper = detectPaparSize(viewport, scale);
 				let wrapper = document.getElementById(pageId), canvas;
 				if (wrapper) {
 					canvas = wrapper.firstElementChild;
@@ -52,74 +65,102 @@ limitations under the License.
 					wrapper.insertAdjacentElement('beforeend', canvas);
 					container.insertAdjacentElement('beforeend', wrapper);
 				}
-				wrapper.classList.add('loading');
+				canvas.className = `paper-${paper.size}-${paper.orientation}`;
 				canvas.height = viewport.height;
 				canvas.width = viewport.width;
-				canvas.style = `height:${canvas.height / scale}px;width:${canvas.width / scale}px`;
+				canvas.style.height = canvas.height / scale + 'px';
+				canvas.style.width = canvas.width / scale + 'px';
 				page.render({
 					canvasContext: canvas.getContext('2d'),
 					viewport: viewport,
-				}).then(() => {
-					wrapper.classList.remove('loading');
 				});
 			}
 		}
 	}
 
-	// Header Elements
-	const filename = document.getElementById('filename');
-	const pageNumber = document.getElementById('pageNumber');
-	const pageLength = document.getElementById('pageLength');
+	window.addEventListener('scroll', () => {
+		let currentPage, currentPageNumber = pageNumber.value | 0;
+		while (currentPage = document.getElementById('page' + currentPageNumber)) {
+			const { bottom, top, height } = currentPage.getBoundingClientRect();
+			const viewportHeight = document.documentElement.getBoundingClientRect().height;
+			if (bottom < viewportHeight * .5 && bottom < height) {
+				currentPageNumber += 1;
+			} else if (top > viewportHeight * .5 || top > height) {
+				currentPageNumber -= 1;
+			} else {
+				break;
+			}
+		}
+		pageNumber.value = currentPageNumber;
+	}, { passive: true });
+
+	pageNumber.onchange = e => {
+		const page = document.getElementById('page' + e.target.value);
+		if (page) {
+			page.scrollIntoView({ behavior: 'smooth' });
+		}
+	};
+
+	document.body.classList.add('downloading');
+	function onclickLoading() {
+		promisePause = new Promise(resolve => {
+			document.body.classList.remove('rendering');
+			status.onclick = onclickPaused.bind(resolve);
+		});
+	};
+	function onclickPaused() {
+		document.body.classList.add('rendering');
+		status.onclick = onclickLoading;
+		this();
+	};
+	onclickPaused.bind(() => {})();
 
 	try {
-		if (!url) throw new Error('No URL.');
-
 		const renderer = new Renderer(url);
-		renderer.render(window.devicePixelRatio);
-	
+		const rendering = renderer.render(window.devicePixelRatio);
+
 		const pdfDocument = await renderer.loaded;
+		document.body.classList.remove('downloading');
+		
 		browser.runtime.sendMessage({
 			data: await pdfDocument.getData(),
 			filename: renderer.filename,
 		});
-
-		if (browser.tabs) {
-			if ('onZoomChange' in browser.tabs) {
-				const timeout = 200;
-				let timeoutId;
-				browser.tabs.onZoomChange.addListener(() => {
-					clearTimeout(timeoutId);
-					timeoutId = setTimeout(() => {
-						renderer.render(window.devicePixelRatio);
-					}, timeout);
-				});
-			}
-		}
-
-		// Header
-		filename.textContent = renderer.filename;
-		pageNumber.max = pdfDocument.numPages;
-		pageLength.textContent = pdfDocument.numPages;
-		pageNumber.onchange = e => {
-			const page = document.getElementById('page' + e.target.value);
-			page.scrollIntoView({ behavior: 'smooth' });
-		};
-		window.onscroll = e => {
-			const currentPageNumber = pageNumber.value | 0;
-			const page = document.getElementById('page' + currentPageNumber);
-			const { bottom, top, height } = page.getBoundingClientRect();
-			const viewportHeight = document.documentElement.getBoundingClientRect().height;
-			if (bottom < viewportHeight * .5 && bottom < height) {
-				pageNumber.value = currentPageNumber + 1;
-			} else if (top > viewportHeight * .5 || top > height) {
-				pageNumber.value = currentPageNumber - 1;
-			}
-		};
+		document.title = filename.textContent = renderer.filename;
+		await rendering;
 	} catch (e) {
 		// Header
 		pageNumber.max = pageNumber.min = pageNumber.value = 0;
 		pageLength.textContent = 0;
 		// Main
-		container.insertAdjacentHTML('beforeend', `<p class=error>Failed to load PDF file: ${e.message}</p>`)
+		container.insertAdjacentHTML('beforeend', `<p class=error>Failed to load PDF file: ${e.message}</p>`);
+		// Page Action
+		browser.pageAction.hide(tabId);
+	} finally {
+		document.body.classList.remove('rendering');
+		document.body.classList.add('rendered');
+		status.onclick = null;
 	}
-})();
+})(location.href, document.getElementById('container'));
+
+function detectPaparSize({ height, width }, scale = 1) {
+	const [ mmH, mmW ] = [ height, width ].map(px => Math.round(px / scale / 96 * 25.4));
+	const [ min, max ] = (mmH < mmW ? [ mmH, mmW ] : [ mmW, mmH ]);
+	return {
+		height: mmH,
+		width: mmW,
+		orientation: height < width ? 'landscape' : 'portrait',
+		size: {
+			'148x210': 'A5',
+			'210x297': 'A4',
+			'297x420': 'A3',
+			'176x250': 'B5',
+			'250x353': 'B4',
+			'182x257': 'JIS-B5',
+			'257x364': 'JIS-B4',
+			'216x279': 'letter',
+			'216x356': 'legal',
+			'279x432': 'ledger',
+		}[min + 'x' + max] || 'unknown',
+	};
+}

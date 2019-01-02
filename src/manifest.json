@@ -1,11 +1,11 @@
 {
 	"manifest_version": 2,
 	"name": "PDF Viewer for Android",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"applications": {
 		"gecko": {
 			"id": "{ac4b5eb4-9bcb-48c3-bfd7-807530efadc9}",
-			"strict_min_version": "63.0"
+			"strict_min_version": "57.0"
 		}
 	},
 	"author": "_y_s",
@@ -22,6 +22,6 @@
 		"default_icon": "download-38.png",
 		"default_title": "Download PDF"
 	},
-	"permissions": ["*://*/", "downloads", "webRequest", "webRequestBlocking"],
-	"web_accessible_resources": ["index.html"]
+	"permissions": ["<all_urls>", "downloads", "webRequest", "webRequestBlocking"],
+	"web_accessible_resources": ["viewer.css", "pdf.worker.js"]
 }

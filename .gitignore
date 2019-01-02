@@ -1,6 +1,6 @@
-*
-!src/
-!.md
+/*
+!/src/
+!/*.md
 
 # Windows thumbnail cache files
 Thumbs.db

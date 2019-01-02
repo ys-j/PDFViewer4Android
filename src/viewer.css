@@ -1,0 +1,137 @@
+:root {
+	--red70: #a4000f;
+	--grey60: #4a4a4f;
+	--grey80: #2a2a2e;
+	--white: #ffffff;
+	--white-a20: rgba(255, 255, 255, .2);
+	--white-a40: rgba(255, 255, 255, .4);
+	--shadow: 0 2px 8px 1px #0c0c0d;
+}
+* {
+	box-sizing: border-box;
+}
+html, body {
+	margin: 0;
+}
+@media screen {
+	html {
+		height: 100%;
+	}
+	body {
+		display: flex;
+		flex-flow: column nowrap;
+		height: 100%;
+		min-width: 100%;
+		width: -moz-fit-content;
+	}
+	header, footer {
+		align-items: center;
+		background: var(--grey60);
+		color: var(--white);
+		display: flex;
+		font-size: 12px;
+		justify-content: space-between;
+		padding: 0 1em;
+		width: 100%;
+	}
+	header {
+		border-bottom: 1px solid var(--grey80);
+		height: 32px;
+		position: fixed;
+	}
+	h1 {
+		background: url(loading.svg) no-repeat 0/32px;
+		flex-grow: 1;
+		font-size: 12px;
+		height: 32px;
+		line-height: 32px;
+		margin: 0;
+		padding-left: 32px;
+	}
+	body.rendered h1 {
+		background: url(icon.svg) no-repeat 0/24px;
+	}
+	#status {
+		background: no-repeat center/16px;
+		height: 32px;
+		width: 32px;
+	}
+	body.rendering #status {
+		background-image: url(pause.svg);
+	}
+	body:not(.rendering):not(.rendered) #status {
+		background-image: url(resume.svg);
+	}
+	body.rendered #status {
+		display: none;
+	}
+	input[type="number"] {
+		background: var(--white-a20);
+		border: 1px solid var(--grey80);
+		color: currentColor;
+		font-size: inherit;
+		padding: 2px;
+		text-align: right;
+		width: 3em;
+		-moz-appearance: textfield;
+	}
+	progress {
+		border: 0;
+		bottom: -3px;
+		height: 2px;
+		margin: 0 -32px;
+		position: absolute;
+		width: -moz-available;
+	}
+	body.rendered progress {
+		display: none;
+	}
+	main {
+		align-items: safe center;
+		background: var(--grey60);
+		display: flex;
+		flex-flow: column nowrap;
+		flex-grow: 1;
+		justify-content: center;
+		padding-top: 32px;
+		width: 100%;
+	}
+	main:empty {
+		height: 100%;
+	}
+	body.downloading main::after {
+		content: url(loading.svg);
+		height: 96px;
+		margin: auto;
+		width: 64px;
+	}
+	canvas {
+		background: var(--white);
+		box-shadow: var(--shadow);
+		margin: 8px;
+	}
+	p.error {
+		background: var(--white-a40);
+		color: var(--red70);
+		padding: 1em;
+	}
+	footer {
+		border-top: 1px solid var(--grey80);
+	}
+	footer small a {
+		color: inherit;
+		font-style: italic;
+		text-decoration: none;
+	}
+}
+@media print {
+	@page {
+		margin: 0;
+	}
+	header, footer {
+		display: none;
+	}
+	main {
+		line-height: 0;
+	}
+}
